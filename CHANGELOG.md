@@ -2,6 +2,12 @@
 
 本文件记录锤子便签中值得用户关注的变更，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.12.0] - 2026-10-11
+
+### 新增
+
+- 新增私有部署开关 `REQUIRE_LOGIN=true`：未登录访问首页时只显示登录页，退出或会话失效后返回登录页；服务端同步拒绝匿名调用编辑、图片上传、PNG/ZIP 导出、公众号转换、AI 等业务 API。默认仍保留现有匿名体验模式，Cookie 会话和 Skill Token 均可用于已授权访问。
+
 ## [1.11.2] - 2026-10-08
 
 ### 修复
@@ -306,6 +312,7 @@
 - PC 版便签操作栏右侧按钮调整为“AI、删除、分享”的顺序，与 APP 版详情操作保持一致。
 - 重置 Hermes 安装链接前会明确提示旧链接立即失效，并要求二次确认，避免误触轮换。
 
+[1.12.0]: https://github.com/zhaoolee/notes/compare/1.11.2...1.12.0
 [1.11.2]: https://github.com/zhaoolee/notes/compare/1.11.1...1.11.2
 [1.11.1]: https://github.com/zhaoolee/notes/compare/1.11.0...1.11.1
 [1.11.0]: https://github.com/zhaoolee/notes/compare/1.10.7...1.11.0

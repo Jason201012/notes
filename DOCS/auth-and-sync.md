@@ -26,6 +26,7 @@ SUPERADMINPASSWORD=
 SESSION_SECRET=
 NOTES_PUBLIC_BASE_URL=https://notes.example.com
 ANONYMOUS_DAILY_UPLOAD_LIMIT=500
+REQUIRE_LOGIN=false
 ```
 
 这些变量只能由 Express 读取，不得添加 `VITE_` 前缀。生产环境必须使用部署平台
@@ -33,6 +34,19 @@ Secret 注入，并为 `SESSION_SECRET` 配置独立的高熵随机值。未配�
 `SESSION_SECRET` 时，服务端会以管理员凭据派生会话密钥；若管理员凭据也不存在，
 会话密钥只在当前进程生命周期内有效。`NOTES_PUBLIC_BASE_URL` 可选，用于反向代理
 无法传递正确公开协议或域名时，指定写入 Hermes Skill `.env` 的服务地址。
+
+`REQUIRE_LOGIN` 默认为 `false`，保留公开体验所需的匿名编辑与导出；设为 `true`
+（也接受 `1`、`yes` 或 `on`）后进入私有部署模式。首页完成会话检查前只显示加载态，
+未登录时只显示不可关闭的登录页，不会挂载匿名编辑工作区；退出登录或前端定期检查
+发现会话失效后也会回到该登录页。`GET /api/auth/session` 会返回
+`requireLogin`，供前端采用与服务端一致的模式。
+
+服务端在私有模式下独立校验所有 `/api/*` 资源请求，拒绝没有有效 Cookie 会话或
+Skill Token 的图片导入、PNG/ZIP 导出、公众号转换、AI 和工作区接口。健康检查、
+会话状态、登录/退出、账号密码换取 Skill Token，以及带随机票据的 Hermes 安装包
+地址保持可用；各业务路由原有的角色、同源和工作区隔离校验仍继续执行。静态页面与
+登录所需资源不会被拦截。开启前必须配置超级管理员凭据，以便从 `/superadmin`
+创建普通账号。
 
 微信公众号 AppID 与 AppSecret 不属于启动环境变量。任一普通用户或超级管理员从
 便签首页登录后，都可在“设置 → 工具与扩展 → 公众号配置”中填写并保存自己的配置；
@@ -122,7 +136,8 @@ Token 失效。
 
 页面启动后先读取 `/api/auth/session`：
 
-- 无登录会话：继续读写原来的浏览器本地工作区。
+- 无登录会话且未开启强制登录：继续读写原来的浏览器本地工作区。
+- 无登录会话且开启强制登录：停留在登录页，不进入匿名编辑模式。
 - 有普通用户或超级管理员会话且云端已有数据：云端工作区覆盖当前页面状态。
 - 有登录会话但云端为空：把当前浏览器工作区作为该账号的初始云端工作区。
 
@@ -179,6 +194,8 @@ Token 失效。
   管理员独立云工作区、用户名与邮箱建号、邮箱大小写不敏感登录、普通用户改密、
   管理员重置、密码不出现在用户列表和持久化明文中、旧会话失效，以及各账号的
   工作区隔离。
+- `backend/tests/require-login-feedback.test.ts`：私有模式的匿名业务 API 统一返回
+  401，健康/会话/登录/Hermes 安装通道保持可用，Cookie 与 Skill Token 登录后可用。
 - `backend/tests/quota-feedback.test.ts`：500 张共享额度、超额提示和北京时间
   0 点重置。
 - `backend/tests/api-feedback.test.ts`：匿名临时上传策略，以及普通用户和超级

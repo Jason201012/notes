@@ -8,6 +8,11 @@ export interface AuthUser {
   username: string;
 }
 
+export interface AuthState {
+  requireLogin: boolean;
+  user: AuthUser | null;
+}
+
 export function canUseCloudWorkspace(
   user: AuthUser | null,
 ): user is AuthUser {
@@ -63,13 +68,24 @@ async function requestJson<T>(
   return (await response.json()) as T;
 }
 
-export async function getAuthSession(): Promise<AuthUser | null> {
-  const result = await requestJson<{ user: AuthUser | null }>(
+export async function getAuthState(): Promise<AuthState> {
+  const result = await requestJson<{
+    requireLogin?: unknown;
+    user: AuthUser | null;
+  }>(
     "/api/auth/session",
     undefined,
     "无法读取登录状态。",
   );
-  return result.user;
+
+  return {
+    requireLogin: result.requireLogin === true,
+    user: result.user,
+  };
+}
+
+export async function getAuthSession(): Promise<AuthUser | null> {
+  return (await getAuthState()).user;
 }
 
 async function loginAt(

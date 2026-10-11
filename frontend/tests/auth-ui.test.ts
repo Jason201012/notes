@@ -87,6 +87,22 @@ test("普通用户和 superadmin 都拥有云便签能力", () => {
   );
 });
 
+test("强制登录页不能关闭，避免退回匿名编辑模式", () => {
+  const html = renderToStaticMarkup(
+    createElement(LoginDialog, {
+      login: async () => ({
+        id: "private-user",
+        role: "user" as const,
+        username: "private-user",
+      }),
+      onAuthenticated: () => undefined,
+    }),
+  );
+
+  assert.doesNotMatch(html, /login-dialog-close/);
+  assert.doesNotMatch(html, /关闭登录窗口/);
+});
+
 test("superadmin 路由、用户管理和首页云同步入口保持连通", () => {
   const mainSource = readFileSync("src/main.tsx", "utf8");
   const appSource = readFileSync("src/App.tsx", "utf8");
@@ -113,6 +129,15 @@ test("superadmin 路由、用户管理和首页云同步入口保持连通", () 
     /className="account-menu-item account-menu-logout"/,
   );
   assert.match(appSource, /<LoginDialog/);
+  assert.match(appSource, /const \[requireLogin, setRequireLogin\] = useState\(false\)/);
+  assert.match(appSource, /const authState = await getAuthState\(\)/);
+  assert.match(
+    appSource,
+    /if \(!isPlaywrightRender && requireLogin && !authUser\)/,
+  );
+  assert.match(appSource, /className="required-login-page"/);
+  assert.match(appSource, /setRequireLogin\(authState\.requireLogin\)/);
+  assert.match(appSource, /resetAuthenticatedClientState\(\)/);
   assert.match(appSource, /<ChangePasswordDialog/);
   assert.match(appSource, /changePassword=\{changeUserPassword\}/);
   assert.match(appSource, /getCloudWorkspace\(\)/);
@@ -140,6 +165,8 @@ test("superadmin 路由、用户管理和首页云同步入口保持连通", () 
   assert.match(authSource, /"\/api\/auth\/password"/);
   assert.match(authSource, /reset-password/);
   assert.match(authSource, /"\/api\/workspace"/);
+  assert.match(authSource, /export async function getAuthState/);
+  assert.match(authSource, /requireLogin: result\.requireLogin === true/);
   assert.match(authSource, /登录服务暂不可用，请确认后端服务已启动/);
   assert.match(styles, /\.login-dialog-backdrop\s*\{/);
   assert.match(styles, /\.login-dialog-password-toggle\s*\{/);

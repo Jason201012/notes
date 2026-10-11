@@ -34,7 +34,7 @@ test("CHANGELOG 使用固定的人类可读格式记录未发布与正式版本"
   assert.match(changelog, /^# 更新日志\n/);
   assert.equal(
     secondLevelHeadings[latestReleaseIndex],
-    `[${packageVersion.version}] - 2026-10-08`,
+    `[${packageVersion.version}] - 2026-10-11`,
   );
   assert.ok(categoryHeadings.length > 0);
 
@@ -152,6 +152,12 @@ test("changelog 解析器保留便签分节并解析版本比较链接", () => {
     heading: string;
     content: RegExp[];
   }> = [
+    {
+      version: "1.12.0",
+      heading:
+        "[1.12.0](https://github.com/zhaoolee/notes/compare/1.11.2...1.12.0) - 2026-10-11",
+      content: [/REQUIRE_LOGIN=true.*登录页.*匿名.*业务 API.*Skill Token/s],
+    },
     {
       version: "1.11.2",
       heading:

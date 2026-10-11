@@ -8447,6 +8447,7 @@ body,
   line-height: 1.7;
 }
 
+.required-login-page,
 .superadmin-login-page,
 .superadmin-loading {
   min-height: 100vh;

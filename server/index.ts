@@ -237,6 +237,9 @@ const imagesDir = process.env.IMAGE_STORAGE_DIR || path.join(rootDir, "storage",
 const dataDirectory =
   process.env.DATA_STORAGE_DIR || path.join(rootDir, "storage", "data");
 const port = Number(process.env.PORT || 3001);
+const requireLogin = ["1", "true", "yes", "on"].includes(
+  process.env.REQUIRE_LOGIN?.trim().toLowerCase() ?? "",
+);
 const anonymousDailyUploadLimit = Math.max(
   1,
   Number.parseInt(process.env.ANONYMOUS_DAILY_UPLOAD_LIMIT || "500", 10) ||
@@ -4063,11 +4066,56 @@ function assertWechatDraftContentLimits(html: string): void {
 const app = express();
 app.set("trust proxy", 1);
 
+function isPublicApiRequestWhenLoginRequired(request: Request): boolean {
+  if (request.method === "GET") {
+    return (
+      request.path === "/api/auth/session" ||
+      request.path === "/api/health" ||
+      request.path.startsWith("/api/hermes-skill/install/")
+    );
+  }
+
+  if (request.method === "HEAD") {
+    return request.path.startsWith("/api/hermes-skill/install/");
+  }
+
+  if (request.method === "POST") {
+    return (
+      request.path === "/api/auth/login" ||
+      request.path === "/api/auth/logout" ||
+      request.path === "/api/auth/skill-token" ||
+      request.path === "/api/superadmin/login"
+    );
+  }
+
+  return false;
+}
+
 app.use((request: Request, response: Response, next: NextFunction) => {
   applyCorsHeaders(request, response);
 
   if (request.method === "OPTIONS") {
     response.sendStatus(204);
+    return;
+  }
+
+  next();
+});
+
+app.use(async (request: Request, response: Response, next: NextFunction) => {
+  if (
+    !requireLogin ||
+    !request.path.startsWith("/api/") ||
+    isPublicApiRequestWhenLoginRequired(request)
+  ) {
+    next();
+    return;
+  }
+
+  if (!(await getWorkspaceUser(request))) {
+    response.status(401).json({
+      error: "此服务已开启强制登录，请先登录账号。",
+    });
     return;
   }
 
@@ -4121,7 +4169,11 @@ app.use("/images", express.static(imagesDir, { fallthrough: false, immutable: tr
 
 app.get("/api/auth/session", async (request: Request, response: Response) => {
   const user = await getAuthenticatedUser(request);
-  response.json({ user: user ? getPublicAuthUser(user) : null });
+  response.setHeader("Cache-Control", "no-store");
+  response.json({
+    requireLogin,
+    user: user ? getPublicAuthUser(user) : null,
+  });
 });
 
 app.post(

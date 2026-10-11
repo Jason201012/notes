@@ -963,6 +963,7 @@ test("管理员可使用便签服务、创建用户且各账号云工作区严�
       headers: { Cookie: aliceCookie },
     });
     assert.deepEqual(await aliceSession.json(), {
+      requireLogin: false,
       user: {
         id: alice.id,
         role: "user",
@@ -1008,7 +1009,10 @@ test("管理员可使用便签服务、创建用户且各账号云工作区严�
     const staleAliceSession = await fetch(`${baseUrl}/api/auth/session`, {
       headers: { Cookie: aliceCookie },
     });
-    assert.deepEqual(await staleAliceSession.json(), { user: null });
+    assert.deepEqual(await staleAliceSession.json(), {
+      requireLogin: false,
+      user: null,
+    });
 
     const oldAlicePasswordLogin = await postJson(baseUrl, "/api/auth/login", {
       password: alice.initialPassword,
@@ -1048,7 +1052,10 @@ test("管理员可使用便签服务、创建用户且各账号云工作区严�
     const staleChangedSession = await fetch(`${baseUrl}/api/auth/session`, {
       headers: { Cookie: aliceChangedCookie },
     });
-    assert.deepEqual(await staleChangedSession.json(), { user: null });
+    assert.deepEqual(await staleChangedSession.json(), {
+      requireLogin: false,
+      user: null,
+    });
 
     const changedPasswordAfterReset = await postJson(
       baseUrl,

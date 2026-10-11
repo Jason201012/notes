@@ -248,7 +248,10 @@ test("Skill Token 可自动换取、持久化、下载 ZIP，并在改密后失�
     const browserSession = await fetch(`${baseUrl}/api/auth/session`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    assert.deepEqual(await browserSession.json(), { user: null });
+    assert.deepEqual(await browserSession.json(), {
+      requireLogin: false,
+      user: null,
+    });
     const aiRequest = await fetch(`${baseUrl}/api/ai/suggestions`, {
       method: "POST",
       headers: {

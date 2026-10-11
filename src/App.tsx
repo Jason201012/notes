@@ -39,7 +39,7 @@ import {
   changeUserPassword,
   downloadHermesSkillPackage,
   getHermesSkillInstallLink,
-  getAuthSession,
+  getAuthState,
   getCloudWorkspace,
   loginUser,
   logoutUser,
@@ -258,6 +258,7 @@ export default function App() {
   const [isDesktopFocusMode, setIsDesktopFocusMode] = useState(false);
   const [isDesktopSharePreview, setIsDesktopSharePreview] = useState(false);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [requireLogin, setRequireLogin] = useState(false);
   const [authStatus, setAuthStatus] = useState<"loading" | "ready">("loading");
   const [cloudSyncState, setCloudSyncState] = useState<
     "local" | "syncing" | "synced" | "failed"
@@ -453,11 +454,14 @@ export default function App() {
 
     void (async () => {
       try {
-        const session = await getAuthSession();
+        const authState = await getAuthState();
+        const session = authState.user;
 
         if (cancelled) {
           return;
         }
+
+        setRequireLogin(authState.requireLogin);
 
         if (canUseCloudWorkspace(session)) {
           setCloudSyncState("syncing");
@@ -507,7 +511,11 @@ export default function App() {
   }, [isTestDataMode, replaceWorkspace]);
 
   useEffect(() => {
-    if (isPlaywrightRender) {
+    if (
+      isPlaywrightRender ||
+      authStatus !== "ready" ||
+      (requireLogin && !authUser)
+    ) {
       return;
     }
 
@@ -542,10 +550,10 @@ export default function App() {
         window.clearTimeout(retryTimeoutId);
       }
     };
-  }, [isPlaywrightRender]);
+  }, [authStatus, authUser, isPlaywrightRender, requireLogin]);
 
   useEffect(() => {
-    if (authStatus !== "ready") {
+    if (authStatus !== "ready" || requireLogin) {
       return;
     }
 
@@ -560,7 +568,14 @@ export default function App() {
       version: 1,
     });
     setCloudSyncState("local");
-  }, [activeNoteId, authStatus, authUser, folders, noteDocuments]);
+  }, [
+    activeNoteId,
+    authStatus,
+    authUser,
+    folders,
+    noteDocuments,
+    requireLogin,
+  ]);
 
   useEffect(() => {
     if (authStatus !== "ready" || !canUseCloudWorkspace(authUser)) {
@@ -639,6 +654,44 @@ export default function App() {
       window.clearInterval(intervalId);
     };
   }, [authUser, replaceWorkspace]);
+
+  useEffect(() => {
+    if (isTestDataMode || !authUser) {
+      return;
+    }
+
+    let cancelled = false;
+    const intervalId = window.setInterval(() => {
+      void getAuthState()
+        .then((authState) => {
+          if (cancelled) {
+            return;
+          }
+
+          setRequireLogin(authState.requireLogin);
+
+          if (!authState.user || authState.user.id !== authUser.id) {
+            resetAuthenticatedClientState();
+            return;
+          }
+
+          if (
+            authState.user.role !== authUser.role ||
+            authState.user.username !== authUser.username
+          ) {
+            setAuthUser(authState.user);
+          }
+        })
+        .catch(() => {
+          // 短时网络故障不能被误判为会话失效；已有 API 会继续显示自己的错误。
+        });
+    }, CLOUD_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [authUser, isTestDataMode]);
 
   useEffect(() => {
     function handleSaveShortcut(event: KeyboardEvent) {
@@ -1232,6 +1285,27 @@ export default function App() {
     setIsAccountMenuOpen(false);
   }
 
+  function resetAuthenticatedClientState() {
+    if (cloudSaveTimeoutRef.current !== null) {
+      window.clearTimeout(cloudSaveTimeoutRef.current);
+      cloudSaveTimeoutRef.current = null;
+    }
+
+    cloudHydratedUserIdRef.current = null;
+    cloudRevisionRef.current = 0;
+    setAuthUser(null);
+    setAiReviewNoteId(null);
+    setCloudSyncError("");
+    setCloudSyncState("local");
+    setIsAccountMenuOpen(false);
+    setIsChangePasswordOpen(false);
+    setIsSettingsOpen(false);
+    setIsShareOpen(false);
+    replaceWorkspace(getInitialNoteWorkspace());
+    setMobileWorkspaceView("notes");
+    writeCurrentNoteRoute(null);
+  }
+
   async function handleLogout() {
     if (
       canUseCloudWorkspace(authUser) &&
@@ -1257,15 +1331,7 @@ export default function App() {
     }
 
     await logoutUser();
-    cloudHydratedUserIdRef.current = null;
-    cloudRevisionRef.current = 0;
-    setAuthUser(null);
-    setAiReviewNoteId(null);
-    setCloudSyncState("local");
-    setIsAccountMenuOpen(false);
-    replaceWorkspace(getInitialNoteWorkspace());
-    setMobileWorkspaceView("notes");
-    writeCurrentNoteRoute(null);
+    resetAuthenticatedClientState();
   }
 
   async function handleHermesSkillDownload() {
@@ -1859,6 +1925,25 @@ export default function App() {
       onWorkspaceArchiveExport={() => void handleWorkspaceArchiveExport()}
     />
   ) : null;
+
+  if (!isPlaywrightRender && authStatus === "loading") {
+    return (
+      <main className="superadmin-loading">
+        <p>正在验证登录状态...</p>
+      </main>
+    );
+  }
+
+  if (!isPlaywrightRender && requireLogin && !authUser) {
+    return (
+      <main className="required-login-page" data-require-login="true">
+        <LoginDialog
+          login={loginUser}
+          onAuthenticated={handleUserAuthenticated}
+        />
+      </main>
+    );
+  }
 
   return (
     <>

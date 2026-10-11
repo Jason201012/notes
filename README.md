@@ -148,6 +148,10 @@ docker run -d \
   zhaoolee/notes:latest
 ```
 
+私有部署还可设置 `REQUIRE_LOGIN=true`。开启后首页只显示不可关闭的登录页，匿名
+请求不能调用编辑、上传、导出等后端 API；默认值为 `false`，现有公开体验部署不受
+影响。开启前请确保已配置超级管理员，以便登录 `/superadmin` 创建普通账号。
+
 启动后访问 `http://127.0.0.1:18080`。`storage/images` 保存图片和导出的 PNG，
 `storage/data` 保存账号与云端工作区，两者都应持久化和备份。仅使用匿名编辑与导出
 时可省略 `--env-file .env`；需要局域网访问时可将端口映射改为
