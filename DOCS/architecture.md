@@ -224,6 +224,13 @@ Vite，普通编辑仍可使用，但 `/api/export`、`/api/archive` 和图片�
 - `GET /api/wechat/status`：使用当前登录账号自己的配置取得并缓存微信接口调用凭据，
   只返回是否已配置、是否连通和脱敏后的错误信息，不返回接口调用凭据
 - `POST /api/images/import`：上传图片或从 URL 下载图片
+- `POST /api/import/wechat/preview`：仅允许有效登录会话或 Skill Token 读取一条公开微信文章链接，抽取正文并转成
+  Markdown，图片写入现有 `/images` 内容哈希存储。只返回预览，不创建便签、不改
+  云端工作区。与 `POST /api/wechat` 的公众号发布链路无关。`WECHAT_IMPORT_ENABLED=false`
+  时关闭；无论 `REQUIRE_LOGIN` 是否启用，匿名请求均返回 401 且不消耗额度、不抓取文章。
+  登录账号有每小时频率限制，浏览器抓取最多同时 2 个。HTTP 正文不完整时通过已有
+  Playwright 浏览器渲染，错误判定排除脚本、样式及隐藏模板文字；动态短文取首个正文行
+  作为备用标题，图片文章额外提取 `#js_article #img_list` 中的图片，并剔除正文内的发布元信息
 - `POST /api/export`：将 Markdown 导出为 PNG
 - `POST /api/archive`：按 `theme` 生成包含 Markdown、主题化 HTML、图片和字体的 ZIP
 - `POST /api/workspace/archive`：提交当前完整工作区并创建整体导出任务

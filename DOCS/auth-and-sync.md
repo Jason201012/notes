@@ -20,6 +20,11 @@
 
 ## 服务端配置
 
+公众号文章导入 `POST /api/import/wechat/preview` 始终要求有效 Cookie 会话或 Skill
+Token，即使 `REQUIRE_LOGIN=false` 也不提供匿名导入。匿名请求在读取链接、消耗额度和
+抓取文章前返回 `401 AUTH_REQUIRED`；前端所有导入入口统一引导登录，退出或会话失效
+时关闭已有导入弹窗。
+
 ```dotenv
 SUPERADMIN=
 SUPERADMINPASSWORD=
@@ -42,7 +47,7 @@ Secret 注入，并为 `SESSION_SECRET` 配置独立的高熵随机值。未配�
 `requireLogin`，供前端采用与服务端一致的模式。
 
 服务端在私有模式下独立校验所有 `/api/*` 资源请求，拒绝没有有效 Cookie 会话或
-Skill Token 的图片导入、PNG/ZIP 导出、公众号转换、AI 和工作区接口。健康检查、
+Skill Token 的图片导入、公众号文章导入、PNG/ZIP 导出、公众号转换、AI 和工作区接口。健康检查、
 会话状态、登录/退出、账号密码换取 Skill Token，以及带随机票据的 Hermes 安装包
 地址保持可用；各业务路由原有的角色、同源和工作区隔离校验仍继续执行。静态页面与
 登录所需资源不会被拦截。开启前必须配置超级管理员凭据，以便从 `/superadmin`

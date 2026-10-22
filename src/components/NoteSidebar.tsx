@@ -51,6 +51,7 @@ interface NoteSidebarProps {
   searchQuery: string;
   onClose: () => void;
   onCreateNote: () => void;
+  onImportWechat: () => void;
   onDeleteNote: (noteId: string) => void;
   onPermanentlyDeleteNote: (noteId: string) => void;
   onReorderNotes: (activeNoteId: string, overNoteId: string) => void;
@@ -466,6 +467,7 @@ export function NoteSidebar({
   searchQuery,
   onClose,
   onCreateNote,
+  onImportWechat,
   onDeleteNote,
   onPermanentlyDeleteNote,
   onReorderNotes,
@@ -554,6 +556,15 @@ export function NoteSidebar({
           <h2>{categoryLabel}</h2>
         </div>
         <div className="note-sidebar-header-actions">
+          <button
+            type="button"
+            className="note-sidebar-import"
+            aria-label="导入公众号文章"
+            title="导入公众号文章"
+            onClick={onImportWechat}
+          >
+            <span className="wechat-import-toolbar-icon" aria-hidden="true" />
+          </button>
           <button
             type="button"
             className="note-sidebar-create"

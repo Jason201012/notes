@@ -394,6 +394,7 @@ test("便签侧栏呈现搜索、新建、切换入口和移动端横滑删除�
       searchQuery: "",
       onClose: noop,
       onCreateNote: noop,
+      onImportWechat: noop,
       onDeleteNote: noop,
       onPermanentlyDeleteNote: noop,
       onReorderNotes: noop,
@@ -415,6 +416,7 @@ test("便签侧栏呈现搜索、新建、切换入口和移动端横滑删除�
   assert.match(html, /第二张便签/);
   assert.doesNotMatch(html, /正文 A|正文 B|正在编辑/);
   assert.match(html, /aria-label="新建便签"/);
+  assert.match(html, /aria-label="导入公众号文章"/);
   assert.match(html, /aria-label="删除便签：第二张便签"/);
   assert.match(
     html,
@@ -1050,7 +1052,7 @@ test("桌面工作区使用锤子便签网页版的纸面、细线和栏宽比�
   );
   assert.match(
     styles,
-    /@media \(min-width:\s*641px\)[\s\S]*\.desktop-left-actions\s*\{[^}]*top:\s*12px;[^}]*left:\s*calc\(var\(--category-sidebar-width\) \+ var\(--note-sidebar-width\) - 165px\);[^}]*gap:\s*14px;/s,
+    /@media \(min-width:\s*641px\)[\s\S]*\.desktop-left-actions\s*\{[^}]*top:\s*12px;[^}]*left:\s*calc\(var\(--category-sidebar-width\) \+ var\(--note-sidebar-width\) - 247px\);[^}]*gap:\s*14px;/s,
   );
   assert.match(
     styles,
@@ -1179,7 +1181,7 @@ test("移动端复用安卓版 48dp 顶栏素材且返回按钮不会被标题�
   );
   assert.match(
     styles,
-    /\.app-layout\[data-mobile-view="notes"\] \.app-topbar-inner\s*\{[^}]*grid-template-columns:\s*48px minmax\(0,\s*1fr\) 48px;/s,
+    /\.app-layout\[data-mobile-view="notes"\] \.app-topbar-inner\s*\{[^}]*grid-template-columns:\s*48px minmax\(0,\s*1fr\) 40px 40px;/s,
   );
   assert.match(
     styles,

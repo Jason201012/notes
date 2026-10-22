@@ -2,6 +2,20 @@
 
 本文件记录锤子便签中值得用户关注的变更，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.13.0] - 2026-10-22
+
+### 新增
+
+- 登录后可从微信公众号公开文章链接导入新的 Markdown 便签，预览正文与图片后再创建；支持动态短文和图片文章，图片保存在本站并按内容去重。
+
+### 修复
+
+- 微信页面脚本中的错误提示不再导致访问限制误判；正文未完整返回时可通过浏览器兜底获取，保留正文换行、代码块空白和特殊链接，避免漏掉轮播主图或混入地区、时间等界面文字。
+
+### 安全
+
+- 公众号导入始终要求有效登录会话或 Skill Token；匿名请求在抓取、消耗额度前返回 401，未登录点击入口会引导登录。
+
 ## [1.12.0] - 2026-10-11
 
 ### 新增
@@ -345,3 +359,5 @@
 [1.3.0]: https://github.com/zhaoolee/notes/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/zhaoolee/notes/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/zhaoolee/notes/compare/1.0.0...1.1.0
+
+[1.13.0]: https://github.com/zhaoolee/notes/compare/1.12.0...1.13.0

@@ -138,6 +138,7 @@ test("REQUIRE_LOGIN 拦截匿名业务 API 并保留登录与 Skill Token 通道
       { method: "POST", pathname: "/api/workspace/archive" },
       { method: "POST", pathname: "/api/wechat" },
       { method: "POST", pathname: "/api/images/import" },
+      { method: "POST", pathname: "/api/import/wechat/preview" },
     ]) {
       const response = await fetch(`${baseUrl}${request.pathname}`, {
         method: request.method,

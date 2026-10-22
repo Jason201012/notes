@@ -14,6 +14,7 @@ import { EditorPanel, type EditorPanelHandle } from "./components/EditorPanel";
 import { LoginDialog } from "./components/LoginDialog";
 import { MoveNoteDialog } from "./components/MoveNoteDialog";
 import { NoteSidebar } from "./components/NoteSidebar";
+import { WechatImportDialog } from "./components/WechatImportDialog";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SharePanel } from "./components/SharePanel";
@@ -253,6 +254,7 @@ export default function App() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDesktopViewMenuOpen, setIsDesktopViewMenuOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [isWechatImportOpen, setIsWechatImportOpen] = useState(false);
   const [isDesktopCategoryCollapsed, setIsDesktopCategoryCollapsed] =
     useState(false);
   const [isDesktopFocusMode, setIsDesktopFocusMode] = useState(false);
@@ -1295,6 +1297,7 @@ export default function App() {
     cloudRevisionRef.current = 0;
     setAuthUser(null);
     setAiReviewNoteId(null);
+    setIsWechatImportOpen(false);
     setCloudSyncError("");
     setCloudSyncState("local");
     setIsAccountMenuOpen(false);
@@ -1541,6 +1544,25 @@ export default function App() {
     }
   }
 
+  function handleOpenWechatImport() {
+    setIsSettingsOpen(false);
+    setIsShareOpen(false);
+    setIsNoteSidebarOpen(false);
+    setIsCategorySidebarOpen(false);
+    setAiReviewNoteId(null);
+
+    if (authStatus !== "ready") {
+      return;
+    }
+
+    if (!authUser) {
+      setIsLoginOpen(true);
+      return;
+    }
+
+    setIsWechatImportOpen(true);
+  }
+
   function handleCreateNote() {
     setIsSettingsOpen(false);
     setIsShareOpen(false);
@@ -1556,6 +1578,37 @@ export default function App() {
 
     const createdNoteId = createNote("", folderId, shouldStar);
     mobileDraftNoteIdRef.current = createdNoteId;
+    setDesktopWorkspaceView("editor");
+    setMobileWorkspaceView("editor");
+    setIsDesktopViewMenuOpen(false);
+    setIsDesktopSharePreview(false);
+    writeCurrentNoteRoute(
+      { noteId: createdNoteId, view: "editor" },
+      "push",
+    );
+  }
+
+  function handleCreateImportedNote(markdown: string) {
+    if (!authUser) {
+      setIsWechatImportOpen(false);
+      setIsLoginOpen(true);
+      return;
+    }
+
+    setIsSettingsOpen(false);
+    setIsShareOpen(false);
+    setIsNoteSidebarOpen(false);
+    setIsCategorySidebarOpen(false);
+    setAiReviewNoteId(null);
+    setIsWechatImportOpen(false);
+    const folderId = getFolderIdFromCategory(activeCategoryId);
+    const shouldStar = activeCategoryId === "starred";
+
+    if (activeCategoryId === "trash") {
+      setActiveCategoryId("all");
+    }
+
+    const createdNoteId = createNote(markdown, folderId, shouldStar);
     setDesktopWorkspaceView("editor");
     setMobileWorkspaceView("editor");
     setIsDesktopViewMenuOpen(false);
@@ -2026,6 +2079,15 @@ export default function App() {
 
             <button
               type="button"
+              className="mobile-list-import"
+              aria-label="导入公众号文章"
+              title="导入公众号文章"
+              onClick={handleOpenWechatImport}
+            >
+              <span className="wechat-import-toolbar-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
               className="mobile-list-create"
               aria-label="新建便签"
               title="新建便签"
@@ -2046,6 +2108,15 @@ export default function App() {
                 onClick={handleRefreshNotes}
               >
                 <span className="smartisan-toolbar-icon icon-refresh" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="desktop-toolbar-button desktop-import-wechat"
+                aria-label="导入公众号文章"
+                title="导入公众号文章"
+                onClick={handleOpenWechatImport}
+              >
+                <span className="wechat-import-toolbar-icon" aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -2287,6 +2358,7 @@ export default function App() {
             searchQuery={searchQuery}
             onClose={() => setIsNoteSidebarOpen(false)}
             onCreateNote={handleCreateNote}
+            onImportWechat={handleOpenWechatImport}
             onDeleteNote={requestDeleteNote}
             onPermanentlyDeleteNote={requestPermanentlyDeleteNote}
             onReorderNotes={reorderNotes}
@@ -2491,9 +2563,14 @@ export default function App() {
           <div className="category-empty-workspace" role="status">
             <p>{activeCategoryId === "trash" ? "回收站为空" : "这个分类还没有便签"}</p>
             {activeCategoryId !== "trash" ? (
-              <button type="button" onClick={handleCreateNote}>
-                新建便签
-              </button>
+              <>
+                <button type="button" onClick={handleCreateNote}>
+                  新建便签
+                </button>
+                <button type="button" onClick={handleOpenWechatImport}>
+                  导入公众号文章
+                </button>
+              </>
             ) : null}
           </div>
         </div>
@@ -2542,6 +2619,14 @@ export default function App() {
         onClose={clearPendingAction}
         onConfirm={handleConfirmPendingAction}
       />
+
+      {authUser && isWechatImportOpen ? (
+        <WechatImportDialog
+          notes={noteDocuments}
+          onClose={() => setIsWechatImportOpen(false)}
+          onCreateNote={handleCreateImportedNote}
+        />
+      ) : null}
 
       {isMoveDialogOpen ? (
         <MoveNoteDialog

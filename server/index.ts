@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
@@ -74,6 +75,14 @@ import {
   createAiSuggestions,
   isAiAvailable,
 } from "./ai.js";
+import { createWechatPageFetcher, type WechatBrowser } from "./wechat-import/fetch.js";
+import { createWechatImageDownloader } from "./wechat-import/images.js";
+import { WechatImportRateLimiter } from "./wechat-import/rate-limit.js";
+import {
+  createWechatImportPreviewHandler,
+  isWechatImportEnabled,
+} from "./wechat-import/route.js";
+import { previewWechatArticle } from "./wechat-import/service.js";
 import {
   addWechatDraft,
   clearWechatAccessToken,
@@ -787,6 +796,10 @@ function normalizeRenderableImageUrls(
 
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
+    const configured = process.env.PLAYWRIGHT_BROWSERS_PATH;
+    if (configured && configured !== "0" && !existsSync(configured)) {
+      delete process.env.PLAYWRIGHT_BROWSERS_PATH;
+    }
     browserPromise = chromium.launch({ headless: true });
   }
 
@@ -5214,6 +5227,66 @@ app.post(
 app.get("/api/health", (_request: Request, response: Response) => {
   response.json({ ok: true });
 });
+
+const wechatImportLimiter = new WechatImportRateLimiter();
+const fetchWechatPage = createWechatPageFetcher({
+  getBrowser: async () => (await getBrowser()) as WechatBrowser,
+});
+const downloadWechatImage = createWechatImageDownloader();
+
+async function persistImportedWechatImage(
+  request: Request,
+  image: { buffer: Buffer; contentType: string | null },
+): Promise<{ path: string; reused: boolean }> {
+  // 预览阶段写入的图片按内容哈希去重。取消创建便签时不删除文件，避免误删其他便签正在使用的同一张图。
+  const extension = detectImageFormat(image.buffer, image.contentType, null);
+
+  if (!extension || extension === "svg") {
+    throw new Error("unsupported wechat image");
+  }
+
+  const hash = createHash("sha256").update(image.buffer).digest("hex");
+  const filename = `${hash}.${extension}`;
+  let reused = false;
+
+  try {
+    await fs.access(path.join(imagesDir, filename));
+    reused = true;
+  } catch {
+    reused = false;
+  }
+
+  const stored = await persistImage(request, {
+    buffer: image.buffer,
+    mimeType: image.contentType,
+    filename,
+  });
+
+  return {
+    path: stored.path,
+    reused,
+  };
+}
+
+app.post(
+  "/api/import/wechat/preview",
+  createWechatImportPreviewHandler({
+    isEnabled: isWechatImportEnabled,
+    limiter: wechatImportLimiter,
+    getRateIdentity: async (request) => {
+      const user = await getWorkspaceUser(request);
+      return user
+        ? { key: `user:${user.id}`, kind: "authenticated" }
+        : { key: `anon:${request.ip || "unknown"}`, kind: "anonymous" };
+    },
+    preview: (url, request) =>
+      previewWechatArticle(url, {
+        fetchPage: fetchWechatPage,
+        downloadImage: downloadWechatImage,
+        persistImage: (image) => persistImportedWechatImage(request, image),
+      }),
+  }),
+);
 
 app.post(
   "/api/images/import",
