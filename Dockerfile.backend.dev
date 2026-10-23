@@ -7,6 +7,11 @@ RUN apt-get update \
   && python3 -m pip install --break-system-packages --no-cache-dir "fonttools[woff]" \
   && rm -rf /var/lib/apt/lists/*
 
+# Hugo Extended 0.162.1 matches the production runtime for dev parity.
+COPY scripts/install-hugo.sh /tmp/install-hugo.sh
+RUN sh /tmp/install-hugo.sh \
+  && rm -f /tmp/install-hugo.sh
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

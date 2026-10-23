@@ -50,6 +50,7 @@ interface SettingsPanelProps {
   onLogout?: () => void;
   onThemeChange: (themeId: ThemePreferenceId) => void;
   onWorkspaceArchiveExport?: () => void;
+  onSitePublish?: () => void;
 }
 
 const SETTINGS_CATEGORIES = [
@@ -94,6 +95,7 @@ export function SettingsPanel({
   onLogout,
   onThemeChange,
   onWorkspaceArchiveExport = () => undefined,
+  onSitePublish,
 }: SettingsPanelProps) {
   const [category, setCategory] = useState<SettingsCategory>("general");
   const [isFooterLogoUploading, setIsFooterLogoUploading] = useState(false);
@@ -610,6 +612,18 @@ export function SettingsPanel({
                 <h3 id="settings-extensions-title">工具与扩展</h3>
                 <p>管理 AI 辅助能力和外部工具扩展。</p>
               </header>
+
+              {onSitePublish ? (
+                <section className="settings-group" aria-label="发布为网站">
+                  <div className="settings-group-heading">
+                    <strong>发布为网站</strong>
+                    <small>选择便签与分类，生成可独立部署的 Hugo 网站 ZIP。</small>
+                  </div>
+                  <button type="button" className="settings-card" onClick={onSitePublish}>
+                    打开网站发布面板
+                  </button>
+                </section>
+              ) : null}
 
               {canConfigureWechat ? (
                 <section className="settings-group" aria-label="公众号配置">

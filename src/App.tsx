@@ -15,6 +15,7 @@ import { LoginDialog } from "./components/LoginDialog";
 import { MoveNoteDialog } from "./components/MoveNoteDialog";
 import { NoteSidebar } from "./components/NoteSidebar";
 import { WechatImportDialog } from "./components/WechatImportDialog";
+import { SitePublishPanel } from "./features/site-publishing/SitePublishPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SharePanel } from "./components/SharePanel";
@@ -255,6 +256,7 @@ export default function App() {
   const [isDesktopViewMenuOpen, setIsDesktopViewMenuOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isWechatImportOpen, setIsWechatImportOpen] = useState(false);
+  const [isSitePublishOpen, setIsSitePublishOpen] = useState(false);
   const [isDesktopCategoryCollapsed, setIsDesktopCategoryCollapsed] =
     useState(false);
   const [isDesktopFocusMode, setIsDesktopFocusMode] = useState(false);
@@ -698,6 +700,7 @@ export default function App() {
   useEffect(() => {
     function handleSaveShortcut(event: KeyboardEvent) {
       const hasBlockingOverlay =
+        isSitePublishOpen ||
         isSettingsOpen ||
         isLoginOpen ||
         isChangePasswordOpen ||
@@ -770,6 +773,7 @@ export default function App() {
     isNoteSidebarOpen,
     isSettingsOpen,
     isShareOpen,
+    isSitePublishOpen,
     mobileWorkspaceView,
     pendingAction,
   ]);
@@ -1188,6 +1192,7 @@ export default function App() {
       }
 
       const hasOpenOverlay =
+        isSitePublishOpen ||
         isSettingsOpen ||
         isAccountMenuOpen ||
         isLoginOpen ||
@@ -1250,6 +1255,7 @@ export default function App() {
     isPlaywrightRender,
     isSettingsOpen,
     isShareOpen,
+    isSitePublishOpen,
     pendingAction,
   ]);
 
@@ -1298,6 +1304,7 @@ export default function App() {
     setAuthUser(null);
     setAiReviewNoteId(null);
     setIsWechatImportOpen(false);
+    setIsSitePublishOpen(false);
     setCloudSyncError("");
     setCloudSyncState("local");
     setIsAccountMenuOpen(false);
@@ -1831,6 +1838,18 @@ export default function App() {
     setIsSettingsOpen((isOpen) => !isOpen);
   }
 
+  function handleOpenSitePublishing() {
+    if (authUser && cloudHydratedUserIdRef.current !== authUser.id) {
+      setCloudSyncError("便签尚未同步完成，请同步便签后再打开网站发布。");
+      return;
+    }
+    setIsAccountMenuOpen(false);
+    setIsSettingsOpen(false);
+    setIsShareOpen(false);
+    setIsCategorySidebarOpen(false);
+    setIsSitePublishOpen(true);
+  }
+
   const desktopAccountEntry = (
     <div className="app-account" ref={accountContainerRef}>
       <button
@@ -1884,6 +1903,14 @@ export default function App() {
             </span>
           </div>
           {cloudSyncError ? <p role="alert">{cloudSyncError}</p> : null}
+          <button
+            type="button"
+            className="account-menu-item"
+            role="menuitem"
+            onClick={handleOpenSitePublishing}
+          >
+            发布为网站
+          </button>
           {authUser.role === "superadmin" ? (
             <a
               className="account-menu-item"
@@ -1976,6 +2003,7 @@ export default function App() {
       }
       onThemeChange={setSelectedTheme}
       onWorkspaceArchiveExport={() => void handleWorkspaceArchiveExport()}
+      onSitePublish={authUser ? handleOpenSitePublishing : undefined}
     />
   ) : null;
 
@@ -2619,6 +2647,15 @@ export default function App() {
         onClose={clearPendingAction}
         onConfirm={handleConfirmPendingAction}
       />
+
+      {authUser && isSitePublishOpen ? (
+        <SitePublishPanel
+          key={authUser.id}
+          notes={noteDocuments}
+          storageScope={authUser.id}
+          onClose={() => setIsSitePublishOpen(false)}
+        />
+      ) : null}
 
       {authUser && isWechatImportOpen ? (
         <WechatImportDialog

@@ -27,6 +27,17 @@ npm run test:backend
 
 前端测试位于 `frontend/tests`，后端测试位于 `backend/tests`。
 
+## Hugo 网站导出验收
+
+本机需有 Hugo Extended 0.162.1 或兼容版本。先构建，再运行隔离的 Chromium 端到端验收：
+
+```bash
+npm run build
+node scripts/verify-site-publishing.mjs
+```
+
+该命令自建临时账号、便签与图片，验证账号菜单入口、部署子路径 basePath、自建分类、真实 ZIP 下载及生成网站的资源和搜索。截图与报告保存到输出的临时目录；不会操作日常工作区或 iOS 模拟器。Docker 后端镜像已包含固定版本 Hugo。
+
 ## 正文输入延迟 Benchmark
 
 运行真实 Chromium，在便签正文编辑器中逐字符输入，统计每次 `keydown` 到浏览器

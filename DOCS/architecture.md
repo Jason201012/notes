@@ -189,6 +189,9 @@ Vite，普通编辑仍可使用，但 `/api/export`、`/api/archive` 和图片�
 
 ## 后端 API
 
+- `GET/PUT /api/site-publishing/config`：按当前网页登录账号保存网站信息、Logo、分类和便签选择，版本比较避免多设备覆盖；本机缓存支持离线编辑与旧草稿迁移。
+- `POST /api/site-publishing/export`：网页登录用户从独立“发布为网站”面板选择便签和网站分类，设置域名与部署子路径 basePath，下载同时包含 Hugo 源码和已构建 `public/` 的网站 ZIP。第一期仅导出，不自动推送 GitHub。模块位于 `src/features/site-publishing/` 与 `server/site-publishing/`，操作、部署、图片和运行时边界见 `DOCS/site-publishing.md`。
+
 - `GET /api/health`：健康检查
 - `GET /api/auth/session`：读取当前签名会话
 - `POST /api/auth/login`：普通用户或超级管理员从便签首页登录

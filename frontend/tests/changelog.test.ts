@@ -34,7 +34,7 @@ test("CHANGELOG 使用固定的人类可读格式记录未发布与正式版本"
   assert.match(changelog, /^# 更新日志\n/);
   assert.equal(
     secondLevelHeadings[latestReleaseIndex],
-    `[${packageVersion.version}] - 2026-10-22`,
+    `[${packageVersion.version}] - 2026-10-23`,
   );
   assert.ok(categoryHeadings.length > 0);
 
@@ -152,6 +152,18 @@ test("changelog 解析器保留便签分节并解析版本比较链接", () => {
     heading: string;
     content: RegExp[];
   }> = [
+    {
+      version: "1.14.0",
+      heading:
+        "[1.14.0](https://github.com/zhaoolee/notes/compare/1.13.0...1.14.0) - 2026-10-23",
+      content: [
+        /发布为网站.*Hugo 网站 ZIP/s,
+        /按登录账号保存.*换浏览器.*恢复/s,
+        /站长名.*自定义 Logo.*basePath/s,
+        /默认折叠的“高级设置”/,
+        /首页简介只在首页显示一次/,
+      ],
+    },
     {
       version: "1.13.0",
       heading:

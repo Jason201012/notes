@@ -83,6 +83,8 @@ import {
   isWechatImportEnabled,
 } from "./wechat-import/route.js";
 import { previewWechatArticle } from "./wechat-import/service.js";
+import { createSiteExportHandler } from "./site-publishing/route.js";
+import { createSitePublishingConfigHandlers } from "./site-publishing/config-route.js";
 import {
   addWechatDraft,
   clearWechatAccessToken,
@@ -3268,6 +3270,14 @@ function detectImageFormat(
     return "webp";
   }
 
+  if (buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp") {
+    const brands = buffer.subarray(8, Math.min(buffer.length, 64)).toString("ascii");
+
+    if (brands.includes("avif") || brands.includes("avis")) {
+      return "avif";
+    }
+  }
+
   if (buffer.length >= 2 && buffer.subarray(0, 2).toString("ascii") === "BM") {
     return "bmp";
   }
@@ -3291,6 +3301,8 @@ function detectImageFormat(
       return "gif";
     case "image/webp":
       return "webp";
+    case "image/avif":
+      return "avif";
     case "image/bmp":
       return "bmp";
     case "image/svg+xml":
@@ -3308,6 +3320,7 @@ function detectImageFormat(
       return extension === "jpeg" ? "jpg" : extension;
     case "gif":
     case "webp":
+    case "avif":
     case "bmp":
     case "svg":
       return extension;
@@ -4912,6 +4925,32 @@ app.post(
       });
     }
   },
+);
+
+app.post("/api/site-publishing/export", createSiteExportHandler({
+  rootDirectory: rootDir,
+  imagesDirectory: imagesDir,
+  publicDirectory: publicDir,
+  publicOrigin: getPublicBaseUrl,
+  getUser: requireNoteServiceUser,
+  isSameOrigin: isSameOriginRequest,
+  createZip,
+}));
+
+const sitePublishingConfigHandlers = createSitePublishingConfigHandlers({
+  getUser: requireNoteServiceUser,
+  isSameOrigin: isSameOriginRequest,
+  store: notesDataStore,
+});
+
+app.get(
+  "/api/site-publishing/config",
+  sitePublishingConfigHandlers.getConfiguration,
+);
+
+app.put(
+  "/api/site-publishing/config",
+  sitePublishingConfigHandlers.putConfiguration,
 );
 
 app.post(

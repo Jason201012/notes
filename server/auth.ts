@@ -10,7 +10,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { parseNoteWorkspace } from "../src/lib/notes.js";
+import type { SitePublishDraft } from "../src/features/site-publishing/model.js";
 import type { NoteWorkspace } from "../src/types/app.js";
+import {
+  parseSitePublishDraft,
+  SitePublishConfigurationConflictError,
+} from "./site-publishing/configuration.js";
 
 const scryptAsync = promisify(scrypt);
 const sessionCookieName = "notes_session";
@@ -59,6 +64,11 @@ export interface WechatConfiguration {
   updatedAt: number;
 }
 
+export interface StoredSitePublishingConfiguration {
+  draft: SitePublishDraft;
+  updatedAt: number;
+}
+
 export interface AnonymousQuotaStatus {
   dateKey: string;
   limit: number;
@@ -81,6 +91,10 @@ interface AuthDatabase {
     dateKey: string;
   };
   hermesInstallLinks: Record<string, string>;
+  sitePublishingConfigurations: Record<
+    string,
+    StoredSitePublishingConfiguration
+  >;
   users: StoredAccount[];
   version: 1;
   wechatConfigurations: Record<string, WechatConfiguration>;
@@ -184,6 +198,7 @@ function createEmptyDatabase(): AuthDatabase {
       dateKey: "",
     },
     hermesInstallLinks: {},
+    sitePublishingConfigurations: {},
     users: [],
     version: 1,
     wechatConfigurations: {},
@@ -421,6 +436,34 @@ function parseWechatConfiguration(value: unknown): WechatConfiguration | null {
   }
 }
 
+function parseStoredSitePublishingConfiguration(
+  value: unknown,
+): StoredSitePublishingConfiguration | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const stored = value as Partial<StoredSitePublishingConfiguration>;
+
+  if (
+    typeof stored.updatedAt !== "number" ||
+    !Number.isFinite(stored.updatedAt) ||
+    stored.updatedAt < 0
+  ) {
+    return null;
+  }
+
+  try {
+    return {
+      draft: parseSitePublishDraft(stored.draft),
+      updatedAt: stored.updatedAt,
+    };
+  } catch {
+    // 单条草稿损坏时安全丢弃，不影响其他账号、工作区或公众号配置。
+    return null;
+  }
+}
+
 function parseDatabase(value: unknown): AuthDatabase {
   if (!value || typeof value !== "object") {
     return createEmptyDatabase();
@@ -441,7 +484,26 @@ function parseDatabase(value: unknown): AuthDatabase {
 
   const quota = database.anonymousUploadQuota;
   const hermesInstallLinks: Record<string, string> = {};
+  const sitePublishingConfigurations: Record<
+    string,
+    StoredSitePublishingConfiguration
+  > = {};
   const wechatConfigurations: Record<string, WechatConfiguration> = {};
+
+  if (
+    database.sitePublishingConfigurations &&
+    typeof database.sitePublishingConfigurations === "object"
+  ) {
+    for (const [ownerId, value] of Object.entries(
+      database.sitePublishingConfigurations,
+    )) {
+      const configuration = parseStoredSitePublishingConfiguration(value);
+
+      if (ownerId && configuration) {
+        sitePublishingConfigurations[ownerId] = configuration;
+      }
+    }
+  }
 
   if (
     database.hermesInstallLinks &&
@@ -482,6 +544,7 @@ function parseDatabase(value: unknown): AuthDatabase {
         quota && typeof quota.dateKey === "string" ? quota.dateKey : "",
     },
     hermesInstallLinks,
+    sitePublishingConfigurations,
     users: Array.isArray(database.users)
       ? database.users
           .map(parseStoredAccount)
@@ -797,6 +860,43 @@ export class NotesDataStore {
   ): Promise<WechatConfiguration | null> {
     const database = await this.readDatabase();
     return database.wechatConfigurations[ownerId] ?? null;
+  }
+
+  async getSitePublishingConfiguration(
+    ownerId: string,
+  ): Promise<StoredSitePublishingConfiguration | null> {
+    const database = await this.readDatabase();
+    return database.sitePublishingConfigurations[ownerId] ?? null;
+  }
+
+  /**
+   * 按当前签名账号保存网站发布草稿。expectedUpdatedAt 必须与已存版本一致：
+   * null 表示“尚无记录”，正整数表示指定版本，禁止无条件覆盖其他设备的修改。
+   */
+  async saveSitePublishingConfiguration(
+    ownerId: string,
+    draft: unknown,
+    expectedUpdatedAt: number | null,
+    now = Date.now(),
+  ): Promise<StoredSitePublishingConfiguration> {
+    return this.runExclusive(async () => {
+      const parsedDraft = parseSitePublishDraft(draft);
+      const database = await this.readDatabase();
+      const current = database.sitePublishingConfigurations[ownerId] ?? null;
+      const currentUpdatedAt = current?.updatedAt ?? null;
+
+      if (expectedUpdatedAt !== currentUpdatedAt) {
+        throw new SitePublishConfigurationConflictError(currentUpdatedAt);
+      }
+
+      const stored: StoredSitePublishingConfiguration = {
+        draft: parsedDraft,
+        updatedAt: Math.max(now, (currentUpdatedAt ?? 0) + 1),
+      };
+      database.sitePublishingConfigurations[ownerId] = stored;
+      await this.writeDatabase(database);
+      return stored;
+    });
   }
 
   async saveWechatConfiguration(
