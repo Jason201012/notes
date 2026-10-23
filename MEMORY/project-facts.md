@@ -2,6 +2,16 @@
 
 本文件只记录已从代码或 feedback 测试中确认、预计会影响后续任务的信息。临时调试输出和未经验证的推测不写入这里。
 
+## 2026-10-23：1.14.0 网站发布生产上线
+
+- 已从 GitHub main 的干净副本发布网站功能，应用标签 `1.14.0` 对应提交 `51d11b51a80362ee0833d6d719685a8f1f68b82e`；GitHub main、`codex/hugo-publishing-release` 与标签均已推送，Pages 和多架构 Docker 构建流程成功。原工作区的其他未发布修改未带入本次上线。
+- 独立发布副本完成根项目与插件的 `npm ci`；反馈测试前端 194、后端 68、插件 17（合计 279）全部通过，类型检查与完整构建通过。浏览器实际 Hugo 导出有域名 112、无域名 115 项断言通过；运行时依赖审计 0 漏洞。
+- 生产 `hermes-v2fy:/home/hermes/github/notes` 固定检出 1.14.0，后端与前端容器均 running、自动重启次数 0；后端包含 Hugo Extended 0.162.1。公网更新日志首节为 `1.14.0 - 2026-10-23`。
+- 公网健康、登录与 Secure/HttpOnly Cookie、原云工作区读取、AI 可用状态、网站配置读取/no-store、匿名网站接口 401 均已实测；生产真实生成一份带内置图片的网站 ZIP，CRC、文章图片打包、默认 Logo、`/blog/` 链接和首页简介只显示一次均通过。验收没有写入真实便签或修改账号配置。
+- 部署前后账号数据为 920902 字节、1 个普通账号、2 个云工作区，SHA-256 保持 `ee0886b3af828f932ba3e802be17c2d22c1628382b8d799e05b5d4a98df2d8aa`。两个持久化目录备份为 `/home/hermes/backups/notes/releases/1.14.0-20261023T010939Z-predeploy/storage.tar.gz`，2400147646 字节，SHA-256 `69cdafe3220200164d7e92bfc8ac55ae91e9be2e84a1d7334e7c7fbfa1d9a77f`，归档校验通过；备份目录/归档权限为 700/600。
+- 后端镜像 `sha256:15e43f52b4816b272dcf28f114b58b77b4bcd4821184fac1b80e32e1b7cab299`，前端镜像 `sha256:acfbc7bca071848abab1b6f098d63b50bb796c9c4bf70f3b9dd9c17c1c734e3c`。回滚点为 1.13.0（`83ae4dd5747f061d6aacf73ea4f9634e51bcdf6f`），旧镜像保留为 `rollback-1.13.0-before-1.14.0`、`rollback-frontend-1.13.0-before-1.14.0`；未恢复或清空持久化数据。
+- 服务器下载 GitHub/Node 基础镜像较慢。本次后端构建只给固定 Hugo 安装 RUN 使用 host 网络与 `network.host` 构建授权；前端复用同一提交已完成 npm ci 的服务器构建阶段（Node 24）执行源码 `build:static`，再继承原 Nginx 运行基底并替换静态文件。临时构建清单存于同一备份目录的 `build-only.yml`、`build-frontend-cached.yml`；仓库源码和运行时 Compose 配置保持干净，未修改依赖版本或 Docker 守护进程配置。
+
 ## 2026-10-22：四篇公众号文章生产图片、PNG 与 ZIP 补充验收
 
 - 用户明确要求补充此前未执行的四篇文章图片显示、PNG 导出与 ZIP 归档。生产仍为
